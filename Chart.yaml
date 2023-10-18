@@ -1,5 +1,5 @@
 apiVersion: v2
-name: task-git
+name: task-mvn
 version: 0.0.1
 description: |
   This Task represents Git and is able to initialize and clone a remote

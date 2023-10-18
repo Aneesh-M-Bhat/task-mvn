@@ -2,50 +2,23 @@
 
 source ./test/helper/helper.sh
 
-@test "[e2e] using the task to clone a remote repository" {
-	[ -n "${BASE_DIR}" ]
+# Testing the mvn task,
+@test "[e2e] mvn task" {
+    [ -n "${E2E_MVN_PARAMS_URL}" ]
+    [ -n "${E2E_MVN_PARAMS_REVISION}" ]
 
-	run kubectl delete taskrun --all
-	assert_success
+    run tkn pipeline start task-mvn \
+        --param="URL=${E2E_MVN_PARAMS_URL}" \
+        --param="REVISION=${E2E_MVN_PARAMS_REVISION}" \
+        --param="VERBOSE=true" \
+        --workspace="name=source,claimName=task-mvn,subPath=source" \
+        --filename=test/e2e/resources/pipeline-mvn.yaml \
+        --showlog
+    assert_success
 
-	run tkn task start git \
-		--param="URL=https://github.com/tektoncd/community.git" \
-		--param="DEPTH=1" \
-		--param="VERBOSE=true" \
-		--use-param-defaults \
-		--workspace="name=output,emptyDir=" \
-		--skip-optional-workspace \
-		--showlog >&3
-	assert_success
+    # waiting a few seconds before asserting results
+	sleep 30
 
-	#
-	# Asserting TaskRun Status
-	#
-
-	readonly tmpl_file="${BASE_DIR}/go-template.tpl"
-
-	cat >${tmpl_file} <<EOS
-{{- range .status.conditions -}}
-  {{- if and (eq .type "Succeeded") (eq .status "True") }}
-    {{ .message }}
-  {{- end }}
-{{- end -}}
-EOS
-
-	run tkn taskrun describe --output=go-template-file --template=${tmpl_file}
-	assert_success
-	assert_success --partial 'All Steps have completed executing'
-
-	#
-	# Asserting Results
-	#
-
-	cat >${tmpl_file} <<EOS
-{{- range .status.taskResults -}}
-  {{ printf "%s=%s\n" .name .value }}
-{{- end -}}
-EOS
-	run tkn taskrun describe --output=go-template-file --template=${tmpl_file}
-	assert_success
-	assert_output --regexp $'^COMMIT=\S+\nCOMMITTER_DATE=\S+\nURL=\S+.*'
+    # assering the taskrun status, making sure all steps have been successful
+    assert_tekton_resource "pipelinerun" --partial '(Failed: 0, Cancelled 0), Skipped: 0'
 }
