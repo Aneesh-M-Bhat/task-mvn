@@ -9,6 +9,11 @@ BATS_FLAGS ?= --print-output-on-failure --show-output-of-passing-tests --verbose
 # path to the bats test files, overwite the variables below to tweak the test scope
 E2E_TESTS ?= ./test/e2e/*.bats
 
+E2E_PVC ?= test/e2e/resources/pvc-mvn.yaml
+E2E_MVN_PARAMS_REVISION ?= master
+E2E_MVN_PARAMS_URL ?= https://github.com/shashirajraja/shopping-cart 
+E2E_TEST_DIR ?= ./test/e2e
+
 # generic arguments employed on most of the targets
 ARGS ?=
 
@@ -52,11 +57,16 @@ clean:
 bats: install
 	$(BATS_CORE) $(BATS_FLAGS) $(ARGS) $(E2E_TESTS)
 
+.PHONY: prepare-e2e
+prepare-e2e: task-git
+	kubectl apply -f ${E2E_PVC}
+
 # run end-to-end tests against the current kuberentes context, it will required a cluster with tekton
 # pipelines and other requirements installed, before start testing the target invokes the
 # installation of the current project's task (using helm).
 .PHONY: test-e2e
-test-e2e: task-git
+test-e2e: prepare-e2e
+test-e2e: E2E_TESTS = $(E2E_TEST_DIR)/*.bats
 test-e2e: bats
 
 # act runs the github actions workflows, so by default only running the test workflow (integration

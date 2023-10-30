@@ -2,6 +2,8 @@
 
 source ./test/helper/helper.sh
 
+# E2E tests parameters for the test pipeline
+
 # Testing the mvn task,
 @test "[e2e] mvn task" {
     [ -n "${E2E_MVN_PARAMS_URL}" ]
